@@ -2,27 +2,27 @@
 
 ## USAGE: PROFILE=1min WAIT_TIME=60 start.sh
 
-if [[ -z $WAIT_TIME ]]; then
+if [ -z $WAIT_TIME ]; then
   WAIT_TIME=60
 fi
 
-if [[ -z $PROFILE ]]; then
+if [ -z $PROFILE ]; then
   PROFILE=1min
 fi
 
-if [[ -z $PROVIDER ]]; then
+if [ -z $PROVIDER ]; then
   PROVIDER=methods
 fi
 
-if [[ -z $MONGO_URL ]]; then
+if [ -z $MONGO_URL ]; then
   MONGO_URL="mongodb://localhost/apm"
 fi
 
-if [[ -z $MONGO_METRICS_URL ]]; then
+if [ -z $MONGO_METRICS_URL ]; then
   MONGO_METRICS_URL=$MONGO_URL
 fi
 
-if [[ -z $MONGO_SHARD ]]; then
+if [ -z $MONGO_SHARD ]; then
   echo "MONGO_SHARD env var is required!"
   exit 1
 fi
@@ -30,11 +30,19 @@ fi
 ENV_FILE_NAME="env-$PROFILE-$PROVIDER.js"
 
 dumpEnvVarsTo() {
+  echo "MONGO_URL:"$MONGO_URL
   # getting primary from the appUrl
-  MONGO_APP_CONN=$(pick-mongo-primary $MONGO_URL)
+  #MONGO_APP_CONN=$(pick-mongo-primary $MONGO_URL)
+  export MONGO_APP_CONN="kadira:uuloop01@192.168.0.119:20000/kadira_data"
   # using this ugly ~~~ to replace spaces which cause some
   # issues with our env vars exposing script
-  export MONGO_APP_CONN=${MONGO_APP_CONN// /"~~~"}
+  #export MONGO_APP_CONN=${MONGO_APP_CONN// /"~~~"}
+  #echo "MONGO_APP_CONN:"$MONGO_APP_CONN
+  #export MONGO_APP_CONN=$MONGO_APP_CONN
+
+  # MONGO_TEST_URL="mongodb://user:password@192.168.0.119:27018/kadira_data"
+  # MONGO_TEST_CONN=$(pick-mongo-primary $MONGO_TEST_URL)
+  # echo "MONGO_TEST_CONN:"$MONGO_TEST_CONN
 
   # HACK: exposting env vars to the mongo shell
   ENV_DATA=$(env)
@@ -42,7 +50,7 @@ dumpEnvVarsTo() {
   cat _envDataProcess.js >> $1
 }
 
-while [[ true ]]; do
+while [ true ]; do
   startedAt=$(date +%s)
   echo "--------------------------------------------------------"
   echo "`date`: start map-reduce process"
@@ -50,9 +58,11 @@ while [[ true ]]; do
   dumpEnvVarsTo $ENV_FILE_NAME
   set -x;
   if [ -z ${START_TIME+x} ] || [ -z ${END_TIME+x} ]; then
-      mongo $(pick-mongo-primary $MONGO_METRICS_URL) profiles/$PROFILE.js providers/$PROVIDER.js $ENV_FILE_NAME lib.js mapreduce.js incremental-aggregation.js;
+      #mongo $(pick-mongo-primary $MONGO_METRICS_URL) profiles/$PROFILE.js providers/$PROVIDER.js $ENV_FILE_NAME lib.js mapreduce.js incremental-aggregation.js;
+      mongo "kadira:uuloop01@192.168.0.119:20000/kadira_data" profiles/$PROFILE.js providers/$PROVIDER.js $ENV_FILE_NAME lib.js mapreduce.js incremental-aggregation.js;
   else
-      mongo $(pick-mongo-primary $MONGO_METRICS_URL) profiles/$PROFILE.js providers/$PROVIDER.js $ENV_FILE_NAME lib.js mapreduce.js batch-aggregation.js;
+      #mongo $(pick-mongo-primary $MONGO_METRICS_URL) profiles/$PROFILE.js providers/$PROVIDER.js $ENV_FILE_NAME lib.js mapreduce.js batch-aggregation.js;
+      mongo "kadira:uuloop01@192.168.0.119:20000/kadira_data" profiles/$PROFILE.js providers/$PROVIDER.js $ENV_FILE_NAME lib.js mapreduce.js batch-aggregation.js;
   fi
   set +x;
   completedAt=$(date +%s)
@@ -61,7 +71,7 @@ while [[ true ]]; do
 
   echo "`date`: end map-reduce process (tooks $diff secs)"
 
-  if [[ $ONLY_ONCE ]]; then
+  if [ $ONLY_ONCE ]; then
     break
   fi
 
